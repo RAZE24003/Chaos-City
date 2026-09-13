@@ -11,7 +11,7 @@ import {
   payRent,
   triggerChaosEvent,
   upgradeProperty,
-  sellProperty, 
+  sellProperty,
   tradeProperty,
 } from "../game/gameEngine.js";
 import type { Game } from "../types/game.js";
@@ -156,10 +156,20 @@ router.post("/:gameId/roll", (req, res) => {
   }
 
   // Chaos event
+  // Chaos event
   let chaosEvent: string | null = null;
 
   if (landedTile.type === "event") {
     chaosEvent = triggerChaosEvent(game, currentPlayer.id);
+
+    // Check whether the player was removed due to bankruptcy
+    const playerStillInGame = game.players.some(
+      (player) => player.id === currentPlayer.id,
+    );
+
+    if (!playerStillInGame) {
+      bankrupt = true;
+    }
   }
 
   // Unowned property → player must Buy or Skip
@@ -168,7 +178,9 @@ router.post("/:gameId/roll", (req, res) => {
   }
 
   // Mark roll as completed
+  if (!bankrupt && game.status === "playing") {
   game.hasRolled = true;
+}
 
   res.json({
     diceRoll,
@@ -299,8 +311,7 @@ router.post("/:gameId/upgrade", (req, res) => {
     });
   }
 
-  const currentPlayer =
-    game.players[game.currentPlayerIndex];
+  const currentPlayer = game.players[game.currentPlayerIndex];
 
   if (!currentPlayer) {
     return res.status(400).json({
@@ -319,9 +330,7 @@ router.post("/:gameId/upgrade", (req, res) => {
   } catch (error) {
     res.status(400).json({
       error:
-        error instanceof Error
-          ? error.message
-          : "Could not upgrade property",
+        error instanceof Error ? error.message : "Could not upgrade property",
     });
   }
 });
@@ -341,8 +350,7 @@ router.post("/:gameId/sell", (req, res) => {
     });
   }
 
-  const currentPlayer =
-    game.players[game.currentPlayerIndex];
+  const currentPlayer = game.players[game.currentPlayerIndex];
 
   if (!currentPlayer) {
     return res.status(400).json({
@@ -360,14 +368,10 @@ router.post("/:gameId/sell", (req, res) => {
     });
   } catch (error) {
     res.status(400).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not sell property",
+      error: error instanceof Error ? error.message : "Could not sell property",
     });
   }
 });
-
 
 router.post("/:gameId/trade", (req, res) => {
   const game = games.get(req.params.gameId);
@@ -386,20 +390,19 @@ router.post("/:gameId/trade", (req, res) => {
 
   const { sellerId, buyerId, propertyId, price } = req.body;
 
-  if (!sellerId || !buyerId || propertyId === undefined || price === undefined) {
+  if (
+    !sellerId ||
+    !buyerId ||
+    propertyId === undefined ||
+    price === undefined
+  ) {
     return res.status(400).json({
       error: "sellerId, buyerId, propertyId and price are required",
     });
   }
 
   try {
-    tradeProperty(
-      game,
-      sellerId,
-      buyerId,
-      propertyId,
-      price
-    );
+    tradeProperty(game, sellerId, buyerId, propertyId, price);
 
     res.json({
       message: "Property traded successfully!",
@@ -408,9 +411,7 @@ router.post("/:gameId/trade", (req, res) => {
   } catch (error) {
     res.status(400).json({
       error:
-        error instanceof Error
-          ? error.message
-          : "Could not trade property",
+        error instanceof Error ? error.message : "Could not trade property",
     });
   }
 });

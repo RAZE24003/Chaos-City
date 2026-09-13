@@ -334,7 +334,10 @@ export function triggerChaosEvent(game: Game, playerId: string): string {
   return selectedEvent.message;
 }
 
-export function bankruptPlayer(game: Game, playerId: string): void {
+export function bankruptPlayer(
+  game: Game,
+  playerId: string,
+): void {
   const playerIndex = game.players.findIndex(
     (player) => player.id === playerId,
   );
@@ -347,13 +350,18 @@ export function bankruptPlayer(game: Game, playerId: string): void {
   for (const tile of game.board) {
     if (tile.ownerId === playerId) {
       delete tile.ownerId;
+      delete tile.level;
+
+      if (tile.baseRent !== undefined) {
+        tile.rent = tile.baseRent;
+      }
     }
   }
 
-  // Remove the player
+  // Remove the bankrupt player
   game.players.splice(playerIndex, 1);
 
-  // Check if only one player remains
+  // Only one player remains → game over
   if (game.players.length === 1) {
     game.status = "finished";
 
@@ -363,10 +371,13 @@ export function bankruptPlayer(game: Game, playerId: string): void {
       game.winnerId = winner.id;
     }
 
+    game.hasRolled = false;
+    game.pendingAction = "none";
+
     return;
   }
 
-  // Fix current player index after removal
+  // Adjust current player index
   if (playerIndex < game.currentPlayerIndex) {
     game.currentPlayerIndex--;
   }
@@ -375,11 +386,9 @@ export function bankruptPlayer(game: Game, playerId: string): void {
     game.currentPlayerIndex = 0;
   }
 
-  // The next player should get a fresh turn
   game.hasRolled = false;
   game.pendingAction = "none";
 }
-
 
 export function upgradeProperty(
   game: Game,
